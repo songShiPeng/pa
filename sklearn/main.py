@@ -1,9 +1,5 @@
-from itertools import product
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-from sklearn import datasets
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 from sklearn.tree import DecisionTreeClassifier
 import os
 import csv
@@ -12,8 +8,10 @@ from IPython.display import Image
 from sklearn import tree
 import pydotplus
 
-path_train = "train.csv"  # 训练文件
-path_test = "test.csv"  # 测试文件
+path_train = "/data/dm/train.csv"  # 训练文件
+# path_train = "train.csv"  # 训练文件
+# path_test = "test.csv"  # 测试文件
+path_test = "/data/dm/test.csv"  # 测试文件
 lowSpeed = 3
 lowDirection = 30
 path_test_out = "model/"  # 预测结果输出路径为model/xx.csv,有且只能有一个文件并且是CSV格式。
@@ -55,6 +53,10 @@ def ownGroupDirectionCount(*arrs):
             re = re + 1
     return re
 
+def ownY(*arrs):
+    for value in arrs[0]:
+        return int(value)
+
 def trainData():
     """
     文件读取模块，头文件见columns.
@@ -67,10 +69,11 @@ def trainData():
     # print(tempdata)
     # 仍然使用自带的iris数据
     # X = tempdata.iloc[0:][['CALLSTATE','SPEED']]
-    lowCounts = tempdata.sort_values(by = ["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).SPEED.agg(ownGroupSpeedLowCount).to_frame()
-    zeroCounts = tempdata.sort_values(by = ["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).SPEED.agg(ownGroupZeroCount).to_frame()
-    phoneCounts = tempdata.sort_values(by = ["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).CALLSTATE.agg(ownGroupCallCount).to_frame()
-    direcctionCounts = tempdata.sort_values(by = ["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).DIRECTION.agg(ownGroupDirectionCount).to_frame()
+    lowCounts = tempdata.sort_values(by = ["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).SPEED.agg(ownGroupSpeedLowCount).to_frame("lowCount")
+    zeroCounts = tempdata.sort_values(by = ["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).SPEED.agg(ownGroupZeroCount).to_frame("zeroCount")
+    phoneCounts = tempdata.sort_values(by = ["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).CALLSTATE.agg(ownGroupCallCount).to_frame("callCount")
+    direcctionCounts = tempdata.sort_values(by = ["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).DIRECTION.agg(ownGroupDirectionCount).to_frame("directChange")
+    # y = tempdata.sort_values(by = ["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).Y.agg(ownY).to_frame()['Y'].astype(str).values
     y = tempdata.sort_values(by = ["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).Y.mean().to_frame()['Y'].astype(str).values
     # print(lowCounts)
     # print(zeroCounts)
@@ -79,13 +82,37 @@ def trainData():
     X = pd.concat([lowCounts,pd.concat([zeroCounts,pd.concat([phoneCounts,direcctionCounts],axis=1)],axis=1)],axis=1)
     # X = [lowCounts,zeroCounts,phoneCounts,direcctionCounts]
     # y = tempdata['Y'].astype(str)
-    print(X)
+    # print(X.drop(['TERMINALNO'],axis=1))
+    # print(X)
     # print("y:的值")
-    print(y)
+    # print(y)
     # 训练模型，限制树的最大深度4
-    clf = DecisionTreeClassifier(criterion='gini',max_depth=50)
+    clf = DecisionTreeClassifier(criterion='entropy',max_depth=50)
     # 拟合模型
     clf.fit(X, y)
+
+    print("------------开始预测------------\n")
+    tempdata2 = pd.read_csv(path_test,sep=',',index_col=None)
+    lowCounts2 = tempdata2.sort_values(by=["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).SPEED.agg(
+        ownGroupSpeedLowCount).to_frame("lowCount")
+    zeroCounts2 = tempdata2.sort_values(by=["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).SPEED.agg(
+        ownGroupZeroCount).to_frame("zeroCount")
+    phoneCounts2 = tempdata2.sort_values(by=["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).CALLSTATE.agg(
+        ownGroupCallCount).to_frame("callCount")
+    direcctionCounts2 = tempdata2.sort_values(by=["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).DIRECTION.agg(
+        ownGroupDirectionCount).to_frame("directChange")
+
+    # print(lowCounts)
+    # print(zeroCounts)
+    # print(phoneCounts)
+    # print(direcctionCounts)
+    X2 = pd.concat([lowCounts2, pd.concat([zeroCounts2, pd.concat([phoneCounts2, direcctionCounts2], axis=1)], axis=1)],
+                  axis=1)
+    result = clf.predict(X2)
+    # result = pd.concat([tempdata2.sort_values(by=["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).TERMINALNO.first().to_frame('TERMINALNO'),pd.DataFrame(result)],axis=1)
+    # print(result)
+    process(tempdata2.sort_values(by=["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).TERMINALNO.first().to_frame('TERMINALNO'),result)
+
 
     dot_data = tree.export_graphviz(clf, out_file=None)
     graph = pydotplus.graph_from_dot_data(dot_data)
@@ -93,30 +120,21 @@ def trainData():
     Image(graph.create_png())
 
 
-def process():
+def process(tempdata,result):
     """
     处理过程，在示例中，使用随机方法生成结果，并将结果文件存储到预测结果路径下。
     :return:
     """
     import numpy as np
 
-    with open(path_test) as lines:
-        with(open(os.path.join(path_test_out, "test.csv"), mode="w")) as outer:
+    with(open(os.path.join(path_test_out, "test.csv"), mode="w")) as outer:
             writer = csv.writer(outer)
+            writer.writerow(["Id", "Pred"])  # 只有两列，一列Id为用户Id，一列Pred为预测结果(请注意大小写)。
             i = 0
-            ret_set = set([])
-            for line in lines:
-                if i == 0:
-                    i += 1
-                    writer.writerow(["Id", "Pred"])  # 只有两列，一列Id为用户Id，一列Pred为预测结果(请注意大小写)。
-                    continue
-                item = line.split(",")
-                if item[0] in ret_set:
-                    continue
+            for indexs in tempdata.index:
                 # 此处使用随机值模拟程序预测结果
-                writer.writerow([item[0], np.random.rand()])  # 随机值
-
-                ret_set.add(item[0])  # 根据赛题要求，ID必须唯一。输出预测值时请注意去重
+                writer.writerow([int(tempdata.loc[indexs].values[0:1]), result[i]])  # 随机值
+                i=i+1
 
 
 if __name__ == "__main__":
