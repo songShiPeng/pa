@@ -8,8 +8,8 @@ path_train = "train.csv"  # 训练文件
 path_test = "test.csv"  # 测试文件
 # path_train = "/data/dm/train.csv"  # 训练文件
 # path_test = "/data/dm/test.csv"  # 测试文件
-lowSpeed = 5
-lowDirection = 30
+lowSpeed = 2
+lowDirection = 40
 highSpeed = 60
 lowHeight = 10 #下坡阈值
 path_test_out = "model/"  # 预测结果输出路径为model/xx.csv,有且只能有一个文件并且是CSV格式。
@@ -155,7 +155,7 @@ def getModel2(tempdata):
     direcctionCounts = tempdata.sort_values(by=["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).DIRECTION.agg(
         ownGroupDirectionCount).to_frame("directChange")
     height = tempdata.sort_values(by=["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).HEIGHT.agg(
-        ownHeightLowChange).to_frame("directChange")
+        ownHeightLowChange).to_frame("heighChangeCount")
     X = pd.concat([speed, pd.concat([height, pd.concat([phoneCounts, direcctionCounts], axis=1)], axis=1)],
                   axis=1)
     print(X)
