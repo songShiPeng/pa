@@ -8,8 +8,10 @@ path_train = "train.csv"  # 训练文件
 path_test = "test.csv"  # 测试文件
 # path_train = "/data/dm/train.csv"  # 训练文件
 # path_test = "/data/dm/test.csv"  # 测试文件
-lowSpeed = 3
+lowSpeed = 5
 lowDirection = 30
+highSpeed = 60
+lowHeight = 10 #下坡阈值
 path_test_out = "model/"  # 预测结果输出路径为model/xx.csv,有且只能有一个文件并且是CSV格式。
 def ownGroupSpeedLowCount(*arrs,**args2):
     re = 0
@@ -48,6 +50,23 @@ def ownGroupDirectionCount(*arrs):
         if(abs(value - pre) > lowDirection):
             re = re + 1
     return re
+def ownHignCount(*arrs):
+    re = 0
+    for arr in arrs[0]:
+        if (arr > highSpeed):
+            re = re + 1
+    return re
+
+def ownHeightLowChange(*arrs):
+    re = 0
+    pre = -100
+    for value in arrs[0]:
+        if(pre == -100):
+            pre = value
+            continue
+        if(abs(value - pre) > lowHeight):
+            re = re + 1
+    return re
 
 def ownY(*arrs):
     for value in arrs[0]:
@@ -65,7 +84,7 @@ def trainData():
     # print(tempdata)
     # 仍然使用自带的iris数据
     # X = tempdata.iloc[0:][['CALLSTATE','SPEED']]
-    X = getModel(tempdata)
+    X = getModel2(tempdata)
     # y = tempdata.sort_values(by = ["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).Y.agg(ownY).to_frame()['Y'].astype(str).values
     y = tempdata.sort_values(by = ["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).Y.mean().to_frame()['Y'].astype(str).values
     # print(lowCounts)
@@ -87,7 +106,7 @@ def trainData():
 
     print("------------开始预测------------\n")
     tempdata2 = pd.read_csv(path_test,sep=',',index_col=None)
-    X2 = getModel(tempdata2)
+    X2 = getModel2(tempdata2)
     result = clf.predict(X2)
     # result = pd.concat([tempdata2.sort_values(by=["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).TERMINALNO.first().to_frame('TERMINALNO'),pd.DataFrame(result)],axis=1)
     # print(result)
@@ -129,6 +148,18 @@ def getModel(tempdata):
                   axis=1)
     return X
 
+def getModel2(tempdata):
+    speed = tempdata.sort_values(by=["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).SPEED.agg({'lowCount':ownGroupSpeedLowCount,'zeroCount':ownGroupZeroCount,'highCount':ownHignCount})
+    phoneCounts = tempdata.sort_values(by=["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).CALLSTATE.agg(
+        ownGroupCallCount).to_frame("callCount")
+    direcctionCounts = tempdata.sort_values(by=["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).DIRECTION.agg(
+        ownGroupDirectionCount).to_frame("directChange")
+    height = tempdata.sort_values(by=["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).HEIGHT.agg(
+        ownHeightLowChange).to_frame("directChange")
+    X = pd.concat([speed, pd.concat([height, pd.concat([phoneCounts, direcctionCounts], axis=1)], axis=1)],
+                  axis=1)
+    print(X)
+    return X
 if __name__ == "__main__":
     print("****************** start **********************")
     # 程序入口
