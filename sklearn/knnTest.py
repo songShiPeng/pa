@@ -89,7 +89,7 @@ def trainData():
     # X = tempdata.iloc[0:][['CALLSTATE','SPEED']]
     X = getModel2(tempdata)
     # y = tempdata.sort_values(by = ["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).Y.agg(ownY).to_frame()['Y'].astype(str).values
-    y = tempdata.sort_values(by = ["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).Y.mean().to_frame()['Y'].astype(int).values
+    y = tempdata.sort_values(by = ["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).Y.mean().to_frame()['Y'].astype(float).values
     # print(lowCounts)
     # print(zeroCounts)
     # print(phoneCounts)
@@ -153,8 +153,8 @@ def getModel2(tempdata):
     direcctionCounts = tempdata.sort_values(by=["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).DIRECTION.agg(
         ownGroupDirectionCount).to_frame("directChange")
     height = tempdata.sort_values(by=["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).HEIGHT.agg(
-        ownHeightLowChange).to_frame("heighChangeCount").astype(int)
-    X = pd.concat([speed.astype(int), pd.concat([height, pd.concat([phoneCounts, direcctionCounts], axis=1)], axis=1)],
+        ownHeightLowChange).to_frame("heighChangeCount").astype(float)
+    X = pd.concat([speed.astype(float), pd.concat([height, pd.concat([phoneCounts, direcctionCounts], axis=1)], axis=1)],
                   axis=1)
     return X
 if __name__ == "__main__":
