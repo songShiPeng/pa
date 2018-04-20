@@ -1,3 +1,4 @@
+from xgboost import XGBClassifier
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from sklearn.tree import DecisionTreeClassifier
@@ -100,9 +101,8 @@ def trainData():
     # print(y)
     # 训练模型，限制树的最大深度4
     # clf = DecisionTreeClassifier(criterion='entropy',max_depth=50)
-    clf = DecisionTreeClassifier(criterion='gini',max_depth=50)
-    # 拟合模型
-    clf.fit(X, y)
+    xgbc = XGBClassifier()
+    xgbc.fit(X, y)
 
     print("------------start pre------------\n")
     tempdata2 = pd.read_csv(path_test,sep=',',index_col=None)

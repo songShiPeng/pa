@@ -4,6 +4,16 @@ from sklearn.tree import DecisionTreeClassifier
 import os
 import csv
 import pandas as pd
+from sklearn import datasets
+import numpy as np
+from sklearn.cross_validation import train_test_split
+from sklearn.linear_model import LogisticRegression
+
+from sklearn.preprocessing import StandardScaler
+
+
+
+
 path_train = "train.csv"  # 训练文件
 path_test = "test.csv"  # 测试文件
 # path_train = "/data/dm/train.csv"  # 训练文件
@@ -92,17 +102,9 @@ def trainData():
     # print(phoneCounts)
     # print(direcctionCounts)
 
-    # X = [lowCounts,zeroCounts,phoneCounts,direcctionCounts]
-    # y = tempdata['Y'].astype(str)
-    # print(X.drop(['TERMINALNO'],axis=1))
-    # print(X)
-    # print("y:的值")
-    # print(y)
-    # 训练模型，限制树的最大深度4
-    # clf = DecisionTreeClassifier(criterion='entropy',max_depth=50)
-    clf = DecisionTreeClassifier(criterion='gini',max_depth=50)
-    # 拟合模型
-    clf.fit(X, y)
+    sc = StandardScaler()
+    sc.fit(X)
+    X_train_std = sc.transform(X)
 
     print("------------start pre------------\n")
     tempdata2 = pd.read_csv(path_test,sep=',',index_col=None)

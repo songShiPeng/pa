@@ -4,6 +4,10 @@ from sklearn.tree import DecisionTreeClassifier
 import os
 import csv
 import pandas as pd
+from sklearn.neighbors import KNeighborsRegressor as neighbors
+import sklearn
+
+
 path_train = "train.csv"  # 训练文件
 path_test = "test.csv"  # 测试文件
 # path_train = "/data/dm/train.csv"  # 训练文件
@@ -18,7 +22,7 @@ def ownGroupSpeedLowCount(*arrs,**args2):
     for arr in arrs[0]:
         if (arr < lowSpeed and arr > 0):
             re = re+1
-    return re
+    return int(re)
 
 def ownGroupZeroCount(*arrs,**args2):
     re = 0
@@ -29,15 +33,14 @@ def ownGroupZeroCount(*arrs,**args2):
             pstate = True
         else:
             pstate = False
-    return re
+    return int(re)
 
 def ownGroupCallCount(*arrs,**args2):
     re = 0
     for arr in arrs[0]:
         if (arr > 0  and arr < 4):
             re = re+1
-    return re
-
+    return int(re)
 def ownGroupDirectionCount(*arrs):
     re = 0
     pre = -100
@@ -49,13 +52,13 @@ def ownGroupDirectionCount(*arrs):
             continue
         if(abs(value - pre) > lowDirection):
             re = re + 1
-    return re
+    return int(re)
 def ownHignCount(*arrs):
     re = 0
     for arr in arrs[0]:
         if (arr > highSpeed):
             re = re + 1
-    return re
+    return int(re)
 
 def ownHeightLowChange(*arrs):
     re = 0
@@ -66,7 +69,7 @@ def ownHeightLowChange(*arrs):
             continue
         if(abs(value - pre) > lowHeight):
             re = re + 1
-    return re
+    return int(re)
 
 def ownY(*arrs):
     for value in arrs[0]:
@@ -86,28 +89,23 @@ def trainData():
     # X = tempdata.iloc[0:][['CALLSTATE','SPEED']]
     X = getModel2(tempdata)
     # y = tempdata.sort_values(by = ["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).Y.agg(ownY).to_frame()['Y'].astype(str).values
-    y = tempdata.sort_values(by = ["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).Y.mean().to_frame()['Y'].astype(str).values
+    y = tempdata.sort_values(by = ["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).Y.mean().to_frame()['Y'].astype(int).values
     # print(lowCounts)
     # print(zeroCounts)
     # print(phoneCounts)
     # print(direcctionCounts)
 
-    # X = [lowCounts,zeroCounts,phoneCounts,direcctionCounts]
-    # y = tempdata['Y'].astype(str)
-    # print(X.drop(['TERMINALNO'],axis=1))
-    # print(X)
-    # print("y:的值")
-    # print(y)
-    # 训练模型，限制树的最大深度4
-    # clf = DecisionTreeClassifier(criterion='entropy',max_depth=50)
-    clf = DecisionTreeClassifier(criterion='gini',max_depth=50)
-    # 拟合模型
-    clf.fit(X, y)
+    # knn = neighbors(n_neighbors=5, algorithm='ball_tree').fit(X,y)
+
 
     print("------------start pre------------\n")
     tempdata2 = pd.read_csv(path_test,sep=',',index_col=None)
     X2 = getModel2(tempdata2)
-    result = clf.predict(X2)
+    # 预测
+    knn = neighbors(5,'distance')
+    knn.fit(X,y)
+    result = knn.predict(X2)
+    print(result)
     # result = pd.concat([tempdata2.sort_values(by=["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).TERMINALNO.first().to_frame('TERMINALNO'),pd.DataFrame(result)],axis=1)
     # print(result)
     process(tempdata2.sort_values(by=["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).TERMINALNO.first().to_frame('TERMINALNO'),result)
@@ -155,10 +153,9 @@ def getModel2(tempdata):
     direcctionCounts = tempdata.sort_values(by=["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).DIRECTION.agg(
         ownGroupDirectionCount).to_frame("directChange")
     height = tempdata.sort_values(by=["TERMINALNO", "TIME"]).groupby(['TERMINALNO']).HEIGHT.agg(
-        ownHeightLowChange).to_frame("heighChangeCount")
-    X = pd.concat([speed, pd.concat([height, pd.concat([phoneCounts, direcctionCounts], axis=1)], axis=1)],
+        ownHeightLowChange).to_frame("heighChangeCount").astype(int)
+    X = pd.concat([speed.astype(int), pd.concat([height, pd.concat([phoneCounts, direcctionCounts], axis=1)], axis=1)],
                   axis=1)
-    print(X)
     return X
 if __name__ == "__main__":
     print("****************** start **********************")
