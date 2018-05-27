@@ -70,7 +70,7 @@ def ownHeightLowChange(*arrs):
         if(abs(value - pre) > lowHeight and pre != -100):
             re = re + 1
     return re
-def getModel(data):
+def getModel(data,type):
     train1 = []
     # Feature Engineer, 对每一个用户生成特征:
     # trip特征, record特征(数量,state等),
@@ -94,21 +94,13 @@ def getModel(data):
         num_of_state_2 = num_of_state.loc[num_of_state['CALLSTATE'] == 2].shape[0] / float(nsh)
         num_of_state_3 = num_of_state.loc[num_of_state['CALLSTATE'] == 3].shape[0] / float(nsh)
         num_of_state_4 = num_of_state.loc[num_of_state['CALLSTATE'] == 4].shape[0] / float(nsh)
-        del num_of_state
+        # del num_of_state
 
         ### 地点特征
         startlong = temp.loc[0, 'LONGITUDE']
         startlat = temp.loc[0, 'LATITUDE']
         hdis1 = haversine1(startlong, startlat, 113.9177317, 22.54334333)  # 距离某一点的距离
         # 时间特征
-        # 行程时长
-        timeLength = float(temp['TIME'].max()) - float(temp['TIME'].min())
-        lonLength = float(temp['LONGITUDE'].max()) - float(temp['LONGITUDE'].min())
-        latLength = float(temp['LATITUDE'].max()) - float(temp['LATITUDE'].min())
-        minLong = float(temp['LONGITUDE'].min())
-        maxLong = float(temp['LONGITUDE'].max())
-        minLat =  float(temp['LATITUDE'].min())
-        maxLat =  float(temp['LATITUDE'].max())
         # temp['weekday'] = temp['TIME'].apply(lambda x:datetime.datetime.fromtimestamp(x).weekday())
         temp['hour'] = temp['TIME'].apply(lambda x: datetime.datetime.fromtimestamp(x).hour)
         hour_state = np.zeros([24, 1])
@@ -127,25 +119,25 @@ def getModel(data):
             ownGroupCallCount)
         direcctionCounts = temp["DIRECTION"].agg(
             ownGroupDirectionCount)
-        highCount = temp['SPEED'].agg(ownHignCount)
-        heightCount = temp['HEIGHT'].agg(ownHeightLowChange)
-
         # 添加label
-        target = temp.loc[0, 'Y']
-        # 所有特征
-        feature = [item,timeLength,highCount,heightCount,lowCounts,zeroCounts,phoneCounts,direcctionCounts,num_of_trips, num_of_records, num_of_state_0, num_of_state_1, num_of_state_2, num_of_state_3,
-                   num_of_state_4, \
-                   mean_speed, var_speed, mean_height \
-            , float(hour_state[0]), float(hour_state[1]), float(hour_state[2]), float(hour_state[3]),
-                   float(hour_state[4]), float(hour_state[5])
-            , float(hour_state[6]), float(hour_state[7]), float(hour_state[8]), float(hour_state[9]),
-                   float(hour_state[10]), float(hour_state[11])
-            , float(hour_state[12]), float(hour_state[13]), float(hour_state[14]), float(hour_state[15]),
-                   float(hour_state[16]), float(hour_state[17])
-            , float(hour_state[18]), float(hour_state[19]), float(hour_state[20]), float(hour_state[21]),
-                   float(hour_state[22]), float(hour_state[23])
-            , hdis1
-            , target]
+        if(type == 0):
+            target = temp.loc[0, 'Y']
+        else:
+            target = -1.0
+            # 所有特征
+        feature = [item,lowCounts,zeroCounts,phoneCounts,direcctionCounts,num_of_trips, num_of_records, num_of_state_0, num_of_state_1, num_of_state_2, num_of_state_3,
+                       num_of_state_4, \
+                       mean_speed, var_speed, mean_height \
+                , float(hour_state[0]), float(hour_state[1]), float(hour_state[2]), float(hour_state[3]),
+                       float(hour_state[4]), float(hour_state[5])
+                , float(hour_state[6]), float(hour_state[7]), float(hour_state[8]), float(hour_state[9]),
+                       float(hour_state[10]), float(hour_state[11])
+                , float(hour_state[12]), float(hour_state[13]), float(hour_state[14]), float(hour_state[15]),
+                       float(hour_state[16]), float(hour_state[17])
+                , float(hour_state[18]), float(hour_state[19]), float(hour_state[20]), float(hour_state[21]),
+                       float(hour_state[22]), float(hour_state[23])
+                , hdis1
+                , target]
         train1.append(feature)
     return train1
 def haversine1(lon1, lat1, lon2, lat2):  # 经度1，纬度1，经度2，纬度2 （十进制度数）
@@ -169,11 +161,11 @@ data = pd.read_csv(path_train)
 
 alluser = data['TERMINALNO'].nunique()
 train1=[]
-train1 = getModel(data)
+train1 = getModel(data,0)
 train1 = pd.DataFrame(train1)
 
 # 特征命名
-featurename = ['item','timeLength','highCount','heightCount','lowCounts','zeroCounts','phoneCounts','direcctionCounts','num_of_trips', 'num_of_records','num_of_state_0','num_of_state_1','num_of_state_2','num_of_state_3','num_of_state_4',\
+featurename = ['item','lowCounts','zeroCounts','phoneCounts','direcctionCounts','num_of_trips', 'num_of_records','num_of_state_0','num_of_state_1','num_of_state_2','num_of_state_3','num_of_state_4',\
               'mean_speed','var_speed','mean_height'
     ,'h0','h1','h2','h3','h4','h5','h6','h7','h8','h9','h10','h11'
     ,'h12','h13','h14','h15','h16','h17','h18','h19','h20','h21','h22','h23'
@@ -183,7 +175,7 @@ train1.columns = featurename
 
 print("train data process time:",(datetime.datetime.now()-start_all).seconds)
 # 特征使用
-feature_use = [ 'item','timeLength','highCount','heightCount','lowCounts','zeroCounts','phoneCounts','direcctionCounts','num_of_trips', 'num_of_records','num_of_state_0','num_of_state_1','num_of_state_2','num_of_state_3','num_of_state_4',\
+feature_use = [ 'item','lowCounts','zeroCounts','phoneCounts','direcctionCounts','num_of_trips', 'num_of_records','num_of_state_0','num_of_state_1','num_of_state_2','num_of_state_3','num_of_state_4',\
                'mean_speed','var_speed','mean_height'
     ,'h0','h1','h2','h3','h4','h5','h6','h7','h8','h9','h10','h11'
     ,'h12','h13','h14','h15','h16','h17','h18','h19','h20','h21','h22','h23'
@@ -192,7 +184,7 @@ feature_use = [ 'item','timeLength','highCount','heightCount','lowCounts','zeroC
 
 # The same process for the test set
 data = pd.read_csv(path_test)
-test1 = getModel(data)
+test1 = getModel(data,1)
 # make predictions for test data
 test1 = pd.DataFrame(test1)
 test1.columns = featurename
@@ -208,7 +200,10 @@ model_lgb = lgb.LGBMRegressor(objective='regression',num_leaves=5,
 model_lgb.fit(train1[feature_use].fillna(-1), train1['target'])
 y_pred = model_lgb.predict(test1[feature_use].fillna(-1))
 print("lgb success")
-print(model_lgb.feature_importances_)
+
+im=model_lgb.feature_importances_
+print(im)
+
 # output result
 result = pd.DataFrame(test1['item'])
 result['pre'] = y_pred
