@@ -105,6 +105,7 @@ def getModel(data,type):
         timeLength = float(temp['TIME'].max()) - float(temp['TIME'].min())
         lonLength = float(temp['LONGITUDE'].max()) - float(temp['LONGITUDE'].min())
         latLength = float(temp['LATITUDE'].max()) - float(temp['LATITUDE'].min())
+        zoom = lonLength * latLength
         minLong = float(temp['LONGITUDE'].min())
         maxLong = float(temp['LONGITUDE'].max())
         minLat = float(temp['LATITUDE'].min())
@@ -135,7 +136,7 @@ def getModel(data,type):
         else:
             target = -1.0
             # 所有特征
-        feature = [item, timeLength, highCount, heightCount, lowCounts, zeroCounts, phoneCounts, direcctionCounts,
+        feature = [item, zoom,timeLength, highCount, heightCount, lowCounts, zeroCounts, phoneCounts, direcctionCounts,
                    num_of_trips, num_of_records, num_of_state_0, num_of_state_1, num_of_state_2, num_of_state_3,
                    num_of_state_4, \
                    mean_speed, var_speed, mean_height \
@@ -176,7 +177,7 @@ train1 = getModel(data,0)
 train1 = pd.DataFrame(train1)
 
 # 特征命名
-featurename = ['item','timeLength','highCount','heightCount','lowCounts','zeroCounts','phoneCounts','direcctionCounts','num_of_trips', 'num_of_records','num_of_state_0','num_of_state_1','num_of_state_2','num_of_state_3','num_of_state_4',\
+featurename = ['item','zoom','timeLength','highCount','heightCount','lowCounts','zeroCounts','phoneCounts','direcctionCounts','num_of_trips', 'num_of_records','num_of_state_0','num_of_state_1','num_of_state_2','num_of_state_3','num_of_state_4',\
               'mean_speed','var_speed','mean_height'
     ,'h0','h1','h2','h3','h4','h5','h6','h7','h8','h9','h10','h11'
     ,'h12','h13','h14','h15','h16','h17','h18','h19','h20','h21','h22','h23'
@@ -186,7 +187,7 @@ train1.columns = featurename
 
 print("train data process time:",(datetime.datetime.now()-start_all).seconds)
 # 特征使用
-feature_use = [ 'item','timeLength','highCount','heightCount','lowCounts','zeroCounts','phoneCounts','direcctionCounts','num_of_trips', 'num_of_records','num_of_state_0','num_of_state_1','num_of_state_2','num_of_state_3','num_of_state_4',\
+feature_use = [ 'zoom','timeLength','highCount','heightCount','lowCounts','zeroCounts','phoneCounts','direcctionCounts','num_of_trips', 'num_of_records','num_of_state_0','num_of_state_1','num_of_state_2','num_of_state_3','num_of_state_4',\
                'mean_speed','var_speed','mean_height'
     ,'h0','h1','h2','h3','h4','h5','h6','h7','h8','h9','h10','h11'
     ,'h12','h13','h14','h15','h16','h17','h18','h19','h20','h21','h22','h23'
@@ -201,12 +202,12 @@ test1 = pd.DataFrame(test1)
 test1.columns = featurename
 
 # 采用lgb回归预测模型，具体参数设置如下
-model_lgb = lgb.LGBMRegressor(objective='regression',num_leaves=5,
-                              learning_rate=0.01, n_estimators=720,
+model_lgb = lgb.LGBMRegressor(objective='regression',num_leaves=31,
+                              learning_rate=0.1, n_estimators=720,
                               max_bin = 55, bagging_fraction = 0.8,
-                              bagging_freq = 5, feature_fraction = 0.2319,
+                              bagging_freq = 5, feature_fraction = 0.4,
                               feature_fraction_seed=9, bagging_seed=9,
-                              min_data_in_leaf =6, min_sum_hessian_in_leaf = 11)
+                              min_data_in_leaf =10, min_sum_hessian_in_leaf = 11)
 # 训练、预测
 model_lgb.fit(train1[feature_use].fillna(-1), train1['target'])
 y_pred = model_lgb.predict(test1[feature_use].fillna(-1))
@@ -214,6 +215,7 @@ print("lgb success")
 
 im=model_lgb.feature_importances_
 print(im)
+print(im.size)
 
 # output result
 result = pd.DataFrame(test1['item'])
