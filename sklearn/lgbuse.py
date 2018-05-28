@@ -14,7 +14,7 @@ path_test = "/data/dm/test.csv"  # 测试文件路径
 path_result_out = "model/pro_result.csv" #预测结果文件路径
 lowSpeed = 2
 lowDirection = 40
-highSpeed = 50
+highSpeed = 60
 lowHeight = 15 #下坡阈值
 def ownGroupSpeedLowCount(*arrs,**args2):
     re = 0
@@ -101,6 +101,14 @@ def getModel(data,type):
         startlat = temp.loc[0, 'LATITUDE']
         hdis1 = haversine1(startlong, startlat, 113.9177317, 22.54334333)  # 距离某一点的距离
         # 时间特征
+        # 行程时长
+        timeLength = float(temp['TIME'].max()) - float(temp['TIME'].min())
+        lonLength = float(temp['LONGITUDE'].max()) - float(temp['LONGITUDE'].min())
+        latLength = float(temp['LATITUDE'].max()) - float(temp['LATITUDE'].min())
+        minLong = float(temp['LONGITUDE'].min())
+        maxLong = float(temp['LONGITUDE'].max())
+        minLat = float(temp['LATITUDE'].min())
+        maxLat = float(temp['LATITUDE'].max())
         # temp['weekday'] = temp['TIME'].apply(lambda x:datetime.datetime.fromtimestamp(x).weekday())
         temp['hour'] = temp['TIME'].apply(lambda x: datetime.datetime.fromtimestamp(x).hour)
         hour_state = np.zeros([24, 1])
@@ -119,25 +127,28 @@ def getModel(data,type):
             ownGroupCallCount)
         direcctionCounts = temp["DIRECTION"].agg(
             ownGroupDirectionCount)
+        highCount = temp['SPEED'].agg(ownHignCount)
+        heightCount = temp['HEIGHT'].agg(ownHeightLowChange)
         # 添加label
         if(type == 0):
             target = temp.loc[0, 'Y']
         else:
             target = -1.0
             # 所有特征
-        feature = [item,lowCounts,zeroCounts,phoneCounts,direcctionCounts,num_of_trips, num_of_records, num_of_state_0, num_of_state_1, num_of_state_2, num_of_state_3,
-                       num_of_state_4, \
-                       mean_speed, var_speed, mean_height \
-                , float(hour_state[0]), float(hour_state[1]), float(hour_state[2]), float(hour_state[3]),
-                       float(hour_state[4]), float(hour_state[5])
-                , float(hour_state[6]), float(hour_state[7]), float(hour_state[8]), float(hour_state[9]),
-                       float(hour_state[10]), float(hour_state[11])
-                , float(hour_state[12]), float(hour_state[13]), float(hour_state[14]), float(hour_state[15]),
-                       float(hour_state[16]), float(hour_state[17])
-                , float(hour_state[18]), float(hour_state[19]), float(hour_state[20]), float(hour_state[21]),
-                       float(hour_state[22]), float(hour_state[23])
-                , hdis1
-                , target]
+        feature = [item, timeLength, highCount, heightCount, lowCounts, zeroCounts, phoneCounts, direcctionCounts,
+                   num_of_trips, num_of_records, num_of_state_0, num_of_state_1, num_of_state_2, num_of_state_3,
+                   num_of_state_4, \
+                   mean_speed, var_speed, mean_height \
+            , float(hour_state[0]), float(hour_state[1]), float(hour_state[2]), float(hour_state[3]),
+                   float(hour_state[4]), float(hour_state[5])
+            , float(hour_state[6]), float(hour_state[7]), float(hour_state[8]), float(hour_state[9]),
+                   float(hour_state[10]), float(hour_state[11])
+            , float(hour_state[12]), float(hour_state[13]), float(hour_state[14]), float(hour_state[15]),
+                   float(hour_state[16]), float(hour_state[17])
+            , float(hour_state[18]), float(hour_state[19]), float(hour_state[20]), float(hour_state[21]),
+                   float(hour_state[22]), float(hour_state[23])
+            , hdis1
+            , target]
         train1.append(feature)
     return train1
 def haversine1(lon1, lat1, lon2, lat2):  # 经度1，纬度1，经度2，纬度2 （十进制度数）
@@ -165,7 +176,7 @@ train1 = getModel(data,0)
 train1 = pd.DataFrame(train1)
 
 # 特征命名
-featurename = ['item','lowCounts','zeroCounts','phoneCounts','direcctionCounts','num_of_trips', 'num_of_records','num_of_state_0','num_of_state_1','num_of_state_2','num_of_state_3','num_of_state_4',\
+featurename = ['item','timeLength','highCount','heightCount','lowCounts','zeroCounts','phoneCounts','direcctionCounts','num_of_trips', 'num_of_records','num_of_state_0','num_of_state_1','num_of_state_2','num_of_state_3','num_of_state_4',\
               'mean_speed','var_speed','mean_height'
     ,'h0','h1','h2','h3','h4','h5','h6','h7','h8','h9','h10','h11'
     ,'h12','h13','h14','h15','h16','h17','h18','h19','h20','h21','h22','h23'
@@ -175,7 +186,7 @@ train1.columns = featurename
 
 print("train data process time:",(datetime.datetime.now()-start_all).seconds)
 # 特征使用
-feature_use = [ 'item','lowCounts','zeroCounts','phoneCounts','direcctionCounts','num_of_trips', 'num_of_records','num_of_state_0','num_of_state_1','num_of_state_2','num_of_state_3','num_of_state_4',\
+feature_use = [ 'item','timeLength','highCount','heightCount','lowCounts','zeroCounts','phoneCounts','direcctionCounts','num_of_trips', 'num_of_records','num_of_state_0','num_of_state_1','num_of_state_2','num_of_state_3','num_of_state_4',\
                'mean_speed','var_speed','mean_height'
     ,'h0','h1','h2','h3','h4','h5','h6','h7','h8','h9','h10','h11'
     ,'h12','h13','h14','h15','h16','h17','h18','h19','h20','h21','h22','h23'
