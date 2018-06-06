@@ -12,7 +12,7 @@ path_test = "/data/dm/test.csv"  # 测试文件路径
 # path_train = "train.csv"  # 训练文件路径
 # path_test = "test.csv"  # 测试文件路径
 path_result_out = "model/pro_result.csv" #预测结果文件路径
-lowSpeed = 2
+lowSpeed = 5
 lowDirection = 40
 highSpeed = 60
 lowHeight = 15 #下坡阈值
@@ -121,9 +121,9 @@ def getModel(data,type):
         mean_height = temp['HEIGHT'].mean()
         ##次数特征
         lowCounts = temp['SPEED'].agg(
-            ownGroupSpeedLowCount)
+            ownGroupSpeedLowCount)/ float(nsh)
         zeroCounts =temp['SPEED'].agg(
-            ownGroupZeroCount)
+            ownGroupZeroCount)/float(nsh)
         phoneCounts =temp['CALLSTATE'].agg(
             ownGroupCallCount)
         direcctionCounts = temp["DIRECTION"].agg(
@@ -136,7 +136,7 @@ def getModel(data,type):
         else:
             target = -1.0
             # 所有特征
-        feature = [item, zoom,timeLength, highCount, heightCount, lowCounts, zeroCounts, phoneCounts, direcctionCounts,
+        feature = [item, zoom,timeLength, highCount, heightCount, lowCounts, phoneCounts, direcctionCounts,
                    num_of_trips, num_of_records, num_of_state_0, num_of_state_1, num_of_state_2, num_of_state_3,
                    num_of_state_4, \
                    mean_speed, var_speed, mean_height \
@@ -177,7 +177,7 @@ train1 = getModel(data,0)
 train1 = pd.DataFrame(train1)
 
 # 特征命名
-featurename = ['item','zoom','timeLength','highCount','heightCount','lowCounts','zeroCounts','phoneCounts','direcctionCounts','num_of_trips', 'num_of_records','num_of_state_0','num_of_state_1','num_of_state_2','num_of_state_3','num_of_state_4',\
+featurename = ['item','zoom','timeLength','highCount','heightCount','lowCounts','phoneCounts','direcctionCounts','num_of_trips', 'num_of_records','num_of_state_0','num_of_state_1','num_of_state_2','num_of_state_3','num_of_state_4',\
               'mean_speed','var_speed','mean_height'
     ,'h0','h1','h2','h3','h4','h5','h6','h7','h8','h9','h10','h11'
     ,'h12','h13','h14','h15','h16','h17','h18','h19','h20','h21','h22','h23'
@@ -187,7 +187,7 @@ train1.columns = featurename
 
 print("train data process time:",(datetime.datetime.now()-start_all).seconds)
 # 特征使用
-feature_use = [ 'zoom','timeLength','highCount','heightCount','lowCounts','zeroCounts','phoneCounts','direcctionCounts','num_of_trips', 'num_of_records','num_of_state_0','num_of_state_1','num_of_state_2','num_of_state_3','num_of_state_4',\
+feature_use = [ 'zoom','timeLength','highCount','heightCount','lowCounts','phoneCounts','direcctionCounts','num_of_trips', 'num_of_records','num_of_state_0','num_of_state_1','num_of_state_2','num_of_state_3','num_of_state_4',\
                'mean_speed','var_speed','mean_height'
     ,'h0','h1','h2','h3','h4','h5','h6','h7','h8','h9','h10','h11'
     ,'h12','h13','h14','h15','h16','h17','h18','h19','h20','h21','h22','h23'
@@ -202,12 +202,12 @@ test1 = pd.DataFrame(test1)
 test1.columns = featurename
 
 # 采用lgb回归预测模型，具体参数设置如下
-model_lgb = lgb.LGBMRegressor(objective='regression',num_leaves=31,
-                              learning_rate=0.1, n_estimators=720,
+model_lgb = lgb.LGBMRegressor(objective='regression',num_leaves=5,
+                              learning_rate=0.01, n_estimators=720,
                               max_bin = 55, bagging_fraction = 0.8,
-                              bagging_freq = 5, feature_fraction = 0.4,
+                              bagging_freq = 5, feature_fraction = 0.2319,
                               feature_fraction_seed=9, bagging_seed=9,
-                              min_data_in_leaf =10, min_sum_hessian_in_leaf = 11)
+                              min_data_in_leaf =6, min_sum_hessian_in_leaf = 11)
 # 训练、预测
 model_lgb.fit(train1[feature_use].fillna(-1), train1['target'])
 y_pred = model_lgb.predict(test1[feature_use].fillna(-1))
