@@ -7,14 +7,14 @@ from math import radians, cos, sin, asin, sqrt
 
 
 # path
-path_train = "/data/dm/train.csv"  # 训练文件路径
-path_test = "/data/dm/test.csv"  # 测试文件路径
-# path_train = "train.csv"  # 训练文件路径
-# path_test = "test.csv"  # 测试文件路径
+# path_train = "/data/dm/train.csv"  # 训练文件路径
+# path_test = "/data/dm/test.csv"  # 测试文件路径
+path_train = "train.csv"  # 训练文件路径
+path_test = "test.csv"  # 测试文件路径
 path_result_out = "model/pro_result.csv" #预测结果文件路径
 lowSpeed = 5
 lowDirection = 40
-highSpeed = 60
+highSpeed = 40
 lowHeight = 15 #下坡阈值
 def ownGroupSpeedLowCount(*arrs,**args2):
     re = 0
@@ -89,11 +89,11 @@ def getModel(data,type):
         num_of_state = temp[['TERMINALNO', 'CALLSTATE']]
         # print(num_of_state)
         nsh = num_of_state.shape[0]
-        num_of_state_0 = num_of_state.loc[num_of_state['CALLSTATE'] == 0].shape[0] / float(nsh)
-        num_of_state_1 = num_of_state.loc[num_of_state['CALLSTATE'] == 1].shape[0] / float(nsh)
-        num_of_state_2 = num_of_state.loc[num_of_state['CALLSTATE'] == 2].shape[0] / float(nsh)
-        num_of_state_3 = num_of_state.loc[num_of_state['CALLSTATE'] == 3].shape[0] / float(nsh)
-        num_of_state_4 = num_of_state.loc[num_of_state['CALLSTATE'] == 4].shape[0] / float(nsh)
+        num_of_state_0 = num_of_state.loc[num_of_state['CALLSTATE'] == 0].shape[0]
+        num_of_state_1 = num_of_state.loc[num_of_state['CALLSTATE'] == 1].shape[0]
+        num_of_state_2 = num_of_state.loc[num_of_state['CALLSTATE'] == 2].shape[0]
+        num_of_state_3 = num_of_state.loc[num_of_state['CALLSTATE'] == 3].shape[0]
+        num_of_state_4 = num_of_state.loc[num_of_state['CALLSTATE'] == 4].shape[0]
         # del num_of_state
 
         ### 地点特征
@@ -102,10 +102,12 @@ def getModel(data,type):
         hdis1 = haversine1(startlong, startlat, 113.9177317, 22.54334333)  # 距离某一点的距离
         # 时间特征
         # 行程时长
-        timeLength = float(temp['TIME'].max()) - float(temp['TIME'].min())
+        # timeLength = float(temp['TIME'].max()) - float(temp['TIME'].min())
         lonLength = float(temp['LONGITUDE'].max()) - float(temp['LONGITUDE'].min())
         latLength = float(temp['LATITUDE'].max()) - float(temp['LATITUDE'].min())
         zoom = lonLength * latLength
+        maxDistance = sqrt(zoom)
+
         minLong = float(temp['LONGITUDE'].min())
         maxLong = float(temp['LONGITUDE'].max())
         minLat = float(temp['LATITUDE'].min())
@@ -117,6 +119,8 @@ def getModel(data,type):
             hour_state[i] = temp.loc[temp['hour'] == i].shape[0] / float(nsh)
         # 驾驶行为特征
         mean_speed = temp['SPEED'].mean()
+
+        meanTime = maxDistance / mean_speed
         var_speed = temp['SPEED'].var()
         mean_height = temp['HEIGHT'].mean()
         ##次数特征
@@ -126,17 +130,18 @@ def getModel(data,type):
             ownGroupZeroCount)/float(nsh)
         phoneCounts =temp['CALLSTATE'].agg(
             ownGroupCallCount)
-        direcctionCounts = temp["DIRECTION"].agg(
+        direcctionCounts = temp[["DIRECTION",'TIME']].sort_values(by=["TIME"]).DIRECTION.agg(
             ownGroupDirectionCount)
+        # temp2 = temp[['DIRECTION','TIME']]
         highCount = temp['SPEED'].agg(ownHignCount)
-        heightCount = temp['HEIGHT'].agg(ownHeightLowChange)
+        heightCount = temp[["HEIGHT",'TIME']].sort_values(by=["TIME"]).HEIGHT.agg(ownHeightLowChange)
         # 添加label
         if(type == 0):
             target = temp.loc[0, 'Y']
         else:
             target = -1.0
             # 所有特征
-        feature = [item, zoom,timeLength, highCount, heightCount, lowCounts, phoneCounts, direcctionCounts,
+        feature = [item, meanTime,zoom, highCount, heightCount, lowCounts, phoneCounts, direcctionCounts,
                    num_of_trips, num_of_records, num_of_state_0, num_of_state_1, num_of_state_2, num_of_state_3,
                    num_of_state_4, \
                    mean_speed, var_speed, mean_height \
@@ -177,7 +182,7 @@ train1 = getModel(data,0)
 train1 = pd.DataFrame(train1)
 
 # 特征命名
-featurename = ['item','zoom','timeLength','highCount','heightCount','lowCounts','phoneCounts','direcctionCounts','num_of_trips', 'num_of_records','num_of_state_0','num_of_state_1','num_of_state_2','num_of_state_3','num_of_state_4',\
+featurename = ['item','meanTime''zoom','highCount','heightCount','lowCounts','phoneCounts','direcctionCounts','num_of_trips', 'num_of_records','num_of_state_0','num_of_state_1','num_of_state_2','num_of_state_3','num_of_state_4',\
               'mean_speed','var_speed','mean_height'
     ,'h0','h1','h2','h3','h4','h5','h6','h7','h8','h9','h10','h11'
     ,'h12','h13','h14','h15','h16','h17','h18','h19','h20','h21','h22','h23'
@@ -187,7 +192,7 @@ train1.columns = featurename
 
 print("train data process time:",(datetime.datetime.now()-start_all).seconds)
 # 特征使用
-feature_use = [ 'zoom','timeLength','highCount','heightCount','lowCounts','phoneCounts','direcctionCounts','num_of_trips', 'num_of_records','num_of_state_0','num_of_state_1','num_of_state_2','num_of_state_3','num_of_state_4',\
+feature_use = [ 'zoom','meanTime','highCount','heightCount','lowCounts','phoneCounts','direcctionCounts','num_of_trips', 'num_of_records','num_of_state_0','num_of_state_1','num_of_state_2','num_of_state_3','num_of_state_4',\
                'mean_speed','var_speed','mean_height'
     ,'h0','h1','h2','h3','h4','h5','h6','h7','h8','h9','h10','h11'
     ,'h12','h13','h14','h15','h16','h17','h18','h19','h20','h21','h22','h23'
